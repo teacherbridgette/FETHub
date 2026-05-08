@@ -3,27 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FET HUB | Taiwan Resource Exchange</title>
+    <title>FET HUB | Resource Exchange</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #1a2a3a; --accent: #3498db; --success: #2ecc71; --bg: #f4f7f6; --white: #ffffff; }
         body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); color: var(--primary); }
         
-        /* BANNER */
-        .banner { background: var(--primary); color: white; padding: 60px 5%; text-align: center; }
-        .banner h1 { font-size: 4.5rem; margin: 0; text-transform: uppercase; letter-spacing: -2px; }
-        .banner h1 span { color: var(--accent); }
+        .banner { background: var(--primary); color: white; padding: 50px 5%; text-align: center; }
+        .banner h1 { font-size: 4rem; margin: 0; text-transform: uppercase; letter-spacing: -2px; }
+        .banner span { color: var(--accent); }
         
         .container { max-width: 1000px; margin: -30px auto 40px; padding: 0 20px; }
         .card-box { background: var(--white); padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 30px; }
         
-        /* INPUTS */
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 12px; font-family: 'Fredoka'; box-sizing: border-box; }
         .btn { background: var(--accent); color: white; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%; font-family: 'Fredoka'; transition: 0.3s; }
         .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
         
-        /* GRID */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .resource-card { background: white; padding: 20px; border-radius: 20px; border-top: 6px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .tag { font-size: 0.7rem; font-weight: 700; color: var(--accent); text-transform: uppercase; background: #ebf5fb; padding: 4px 8px; border-radius: 5px; margin-right: 5px; }
@@ -34,21 +31,20 @@
 </head>
 <body>
 
-<div id="userStatus">Connecting...</div>
+<div id="userStatus">Checking Connection...</div>
 
 <section class="banner">
     <h1>FET <span>HUB</span></h1>
-    <p>Taiwan's English Teacher Resource Exchange</p>
+    <p>Taiwan's Resource Exchange for Educators</p>
 </section>
 
 <div class="container">
     
     <div id="authArea" class="card-box">
         <h2 style="text-align: center; margin-top: 0;">Teacher Access</h2>
-        <p style="text-align: center; font-size: 0.9rem; color: #666;">Create a quick account to start sharing materials instantly.</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <input type="text" id="username" placeholder="Choose Username (e.g. Teacher Grace)">
-            <input type="password" id="password" placeholder="Choose Password">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
         </div>
         <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button class="btn" onclick="handleAuth('signup')">Create Account</button>
@@ -57,25 +53,22 @@
     </div>
 
     <div id="uploadArea" class="card-box hidden">
-        <h2 style="margin-top: 0;">📤 Share a Resource</h2>
+        <h2 style="margin-top: 0;">📤 Upload Material</h2>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <input type="text" id="fileTitle" placeholder="Activity Title">
-            <select id="fileLevel">
-                <option>Elementary</option><option>Junior High</option><option>Senior High</option>
-            </select>
-            <input type="text" id="fileTopic" placeholder="Topic (e.g. Phonics, Games)">
-            <input type="text" id="fileTextbook" placeholder="Textbook (e.g. Kang Hsuan)">
+            <select id="fileLevel"><option>ES</option><option>JHS</option><option>SHS</option></select>
+            <input type="text" id="fileTopic" placeholder="Topic (e.g. Grammar)">
+            <input type="text" id="fileTextbook" placeholder="Textbook (e.g. Nani)">
         </div>
         <input type="file" id="fileInput" style="margin-top:10px;">
-        <button class="btn" onclick="uploadResource()">Upload to Hub</button>
+        <button class="btn" onclick="uploadResource()">Add to Community</button>
     </div>
 
     <div class="card-box">
-        <h2 style="margin-top: 0;">🔍 Search Materials</h2>
+        <h2 style="margin-top: 0;">🔍 Search</h2>
         <input type="text" id="searchInput" onkeyup="search()" placeholder="Search topics, textbooks, or titles...">
         <div class="grid" id="mainGrid" style="margin-top:20px;">Loading resources...</div>
     </div>
-
 </div>
 
 <script>
@@ -84,7 +77,6 @@
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
     let allData = [];
 
-    // --- AUTH MONITOR ---
     _supabase.auth.onAuthStateChange((event, session) => {
         const authArea = document.getElementById('authArea');
         const uploadArea = document.getElementById('uploadArea');
@@ -93,8 +85,7 @@
         if (session) {
             authArea.classList.add('hidden');
             uploadArea.classList.remove('hidden');
-            const name = session.user.user_metadata.display_name || "Teacher";
-            status.innerHTML = `Welcome, <b>${name}</b> | <a href="#" onclick="_supabase.auth.signOut()">Logout</a>`;
+            status.innerHTML = `Signed in as <b>${session.user.user_metadata.display_name}</b> | <a href="#" onclick="_supabase.auth.signOut()">Logout</a>`;
         } else {
             authArea.classList.remove('hidden');
             uploadArea.classList.add('hidden');
@@ -103,31 +94,21 @@
         fetchData();
     });
 
-    // --- INSTANT AUTH LOGIC ---
     async function handleAuth(type) {
         const user = document.getElementById('username').value;
         const pass = document.getElementById('password').value;
-        
-        if(!user || !pass) return alert("Please fill in both fields!");
-
-        // We use a dummy email since Supabase requires an email format for standard Auth
-        const dummyEmail = `${user.replace(/\s+/g, '').toLowerCase()}@fethub.local`;
+        if(!user || !pass) return alert("Fields required!");
+        const dummyEmail = `${user.toLowerCase().replace(/\s/g, '')}@fethub.local`;
 
         if (type === 'signup') {
-            const { error } = await _supabase.auth.signUp({
-                email: dummyEmail, 
-                password: pass,
-                options: { data: { display_name: user } }
-            });
+            const { error } = await _supabase.auth.signUp({ email: dummyEmail, password: pass, options: { data: { display_name: user } } });
             if (error) alert(error.message);
-            else alert("Account created! You are now logged in.");
         } else {
             const { error } = await _supabase.auth.signInWithPassword({ email: dummyEmail, password: pass });
-            if (error) alert("Login failed. Check your username/password.");
+            if (error) alert("Login failed. Check credentials.");
         }
     }
 
-    // --- DATA LOGIC ---
     async function fetchData() {
         const { data } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
         allData = data || [];
@@ -147,11 +128,7 @@
 
     function search() {
         const term = document.getElementById('searchInput').value.toLowerCase();
-        render(allData.filter(r => 
-            r.title.toLowerCase().includes(term) || 
-            (r.topic && r.topic.toLowerCase().includes(term)) || 
-            (r.textbook && r.textbook.toLowerCase().includes(term))
-        ));
+        render(allData.filter(r => r.title.toLowerCase().includes(term) || (r.topic && r.topic.toLowerCase().includes(term)) || (r.textbook && r.textbook.toLowerCase().includes(term))));
     }
 
     async function uploadResource() {
@@ -161,7 +138,7 @@
 
         const path = `resources/${Date.now()}_${file.name}`;
         const { data: sData, error: sErr } = await _supabase.storage.from('resources').upload(path, file);
-        if (sErr) return alert("Storage error: " + sErr.message);
+        if (sErr) return alert("Storage Error: " + sErr.message);
 
         const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
         const { error: dbErr } = await _supabase.from('activities').insert([{ 
@@ -172,7 +149,7 @@
             file_url: urlData.publicUrl 
         }]);
 
-        if (dbErr) alert("Database error: " + dbErr.message);
+        if (dbErr) alert("Database Error: " + dbErr.message);
         else location.reload();
     }
 </script>
