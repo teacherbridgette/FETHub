@@ -10,100 +10,111 @@
         body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); }
         header { background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .hero { background: var(--primary); color: white; padding: 60px 5%; text-align: center; }
-        .hero h1 { font-size: 3.5rem; margin: 0; }
-        .search-box { margin-top: 25px; }
-        #search { width: 100%; max-width: 400px; padding: 12px 20px; border-radius: 25px; border: none; font-family: 'Fredoka'; }
         .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
         .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-top: 5px solid var(--accent); }
         .btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Fredoka'; font-weight: 600; }
-        #status { position: fixed; bottom: 20px; left: 20px; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; color: white; display: none; z-index: 1000; }
+        
+        /* Upload Form Styling */
+        #uploadSection { display: none; background: white; padding: 30px; border-radius: 20px; margin-bottom: 30px; border: 2px dashed var(--accent); }
+        input, select { display: block; width: 100%; margin: 10px 0; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: 'Fredoka'; }
     </style>
 </head>
 <body>
 
 <header>
     <div style="font-size: 1.5rem; font-weight: 700;">FET<span>HUB</span></div>
-    <button class="btn" onclick="promptLogin()">Sign Up / Login</button>
+    <div id="authArea">
+        <button class="btn" onclick="promptAuth()">Login / Sign Up</button>
+    </div>
 </header>
 
 <div class="hero">
     <h1>FET HUB</h1>
-    <p>Professional Exchange for Taiwan's English Educators</p>
-    <div class="search-box">
-        <input type="text" id="search" placeholder="Search grammar or level..." onkeyup="filterContent()">
-    </div>
+    <p>Professional Exchange for Taiwan's Educators</p>
 </div>
 
 <div class="container">
-    <div class="grid" id="mainGrid">
-        <p>Connecting to FET Hub Database...</p>
+    <div id="uploadSection">
+        <h3>📤 Share a New Activity</h3>
+        <input type="text" id="fileTitle" placeholder="Activity Title (e.g., Past Tense Bingo)">
+        <select id="fileLevel">
+            <option>ES</option>
+            <option>JHS</option>
+            <option>SHS</option>
+        </select>
+        <input type="file" id="fileInput">
+        <button class="btn" onclick="uploadResource()">Upload to Community</button>
     </div>
-</div>
 
-<div id="status"></div>
+    <h2>Community Resources</h2>
+    <div class="grid" id="mainGrid"></div>
+</div>
 
 <script>
     const SB_URL = 'https://jwvnqbwlrtyorsasbinu.supabase.co';
     const SB_KEY = 'sb_publishable_oBbh6V91NJwHAb30qsA0GA_TC33nFDB'; 
-
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
-    let items = [];
 
-    async function start() {
-        const { data, error } = await _supabase.from('activities').select('*');
-        if (error) {
-            showStatus("Error: " + error.message, "#e74c3c");
-            document.getElementById('mainGrid').innerHTML = "<p>Connection error. Check your Supabase Table name.</p>";
-        } else {
-            items = data;
-            render(items);
-            showStatus("Connected to Database!", "#27ae60");
+    // Check if user is logged in
+    _supabase.auth.onAuthStateChange((event, session) => {
+        if (session) {
+            document.getElementById('authArea').innerHTML = `<span>Welcome, Teacher!</span>`;
+            document.getElementById('uploadSection').style.display = 'block';
         }
-    }
+    });
 
-    function render(data) {
+    async function loadData() {
+        const { data } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
         const grid = document.getElementById('mainGrid');
-        if (!data || data.length === 0) {
-            grid.innerHTML = "<p>Database connected! Add a row to your 'activities' table in Supabase to see it here.</p>";
-            return;
-        }
         grid.innerHTML = data.map(i => `
             <div class="card">
-                <span style="color:var(--accent); font-size:0.7rem; font-weight:700;">${i.level || 'ES/JHS'}</span>
+                <span style="font-size:0.7rem; color:var(--accent); font-weight:700;">${i.level}</span>
                 <h3 style="margin:10px 0;">${i.title}</h3>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
-                    <span>❤️ ${i.likes || 0}</span>
-                    <button class="btn" style="font-size:0.7rem;">View</button>
-                </div>
+                <button class="btn" style="width:100%" onclick="window.open('${i.file_url}')">Download</button>
             </div>
         `).join('');
     }
 
-    function filterContent() {
-        const q = document.getElementById('search').value.toLowerCase();
-        render(items.filter(i => i.title.toLowerCase().includes(q)));
+    async function uploadResource() {
+        const file = document.getElementById('fileInput').files[0];
+        const title = document.getElementById('fileTitle').value;
+        const level = document.getElementById('fileLevel').value;
+
+        if (!file || !title) return alert("Please add a title and select a file!");
+
+        // 1. Upload file to Storage
+        const fileName = `${Date.now()}_${file.name}`;
+        const { data: storageData, error: storageError } = await _supabase.storage
+            .from('resources')
+            .upload(fileName, file);
+
+        if (storageError) return alert("Upload failed: " + storageError.message);
+
+        // 2. Get the public URL
+        const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(fileName);
+
+        // 3. Save info to Database
+        await _supabase.from('activities').insert([
+            { title: title, level: level, file_url: urlData.publicUrl }
+        ]);
+
+        alert("Activity shared! Refreshing...");
+        location.reload();
     }
 
-    function showStatus(msg, color) {
-        const s = document.getElementById('status');
-        s.style.display = 'block';
-        s.style.background = color;
-        s.innerText = msg;
-    }
-
-    function promptLogin() {
+    function promptAuth() {
         const email = prompt("Teacher Email:");
-        const pass = prompt("Create Password:");
+        const pass = prompt("Password (min 6 chars):");
         if (email && pass) {
             _supabase.auth.signUp({ email, password: pass }).then(({ error }) => {
-                if (error) alert(error.message);
+                if (error) _supabase.auth.signInWithPassword({ email, password: pass }).then(() => location.reload());
                 else alert("Account created! Check your email to verify.");
             });
         }
     }
 
-    start();
+    loadData();
 </script>
 </body>
 </html>
