@@ -4,198 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FET HUB | Taiwan Resource Exchange</title>
-    
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
-        :root {
-            --primary: #1a2a3a;
-            --accent: #3498db;
-            --success: #2ecc71;
-            --bg: #f4f7f6;
-            --white: #ffffff;
-        }
-
-        body {
-            font-family: 'Fredoka', sans-serif;
-            margin: 0;
-            background: var(--bg);
-            color: var(--primary);
-        }
-
-        /* --- BIG BANNER SECTION --- */
-        .banner {
-            background: var(--primary);
-            color: white;
-            padding: 80px 5%;
-            text-align: center;
-            box-shadow: inset 0 -10px 20px rgba(0,0,0,0.2);
-        }
-
-        .banner h1 {
-            font-size: 5rem;
-            margin: 0;
-            letter-spacing: -2px;
-            text-transform: uppercase;
-        }
-
-        .banner h1 span {
-            color: var(--accent);
-        }
-
-        .banner p {
-            font-size: 1.2rem;
-            opacity: 0.8;
-            margin-top: 10px;
-        }
-
-        /* --- CONTAINER & LAYOUT --- */
-        .container {
-            max-width: 1000px;
-            margin: -40px auto 40px;
-            padding: 0 20px;
-        }
-
-        /* --- AUTH & UPLOAD CARDS --- */
-        .card-box {
-            background: var(--white);
-            padding: 30px;
-            border-radius: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-
-        .auth-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            align-items: center;
-        }
-
-        @media (max-width: 600px) {
-            .auth-grid { grid-template-columns: 1fr; }
-            .banner h1 { font-size: 3rem; }
-        }
-
-        /* --- FORMS & BUTTONS --- */
-        input, select {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            font-family: 'Fredoka';
-            box-sizing: border-box;
-        }
-
-        .btn {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: 0.3s;
-            font-family: 'Fredoka';
-        }
-
+        :root { --primary: #1a2a3a; --accent: #3498db; --success: #2ecc71; --bg: #f4f7f6; --white: #ffffff; }
+        body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); color: var(--primary); }
+        
+        /* BANNER */
+        .banner { background: var(--primary); color: white; padding: 60px 5%; text-align: center; }
+        .banner h1 { font-size: 4rem; margin: 0; text-transform: uppercase; letter-spacing: -2px; }
+        .banner h1 span { color: var(--accent); }
+        
+        .container { max-width: 1000px; margin: -30px auto 40px; padding: 0 20px; }
+        .card-box { background: var(--white); padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        
+        /* INPUTS */
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 12px; font-family: 'Fredoka'; box-sizing: border-box; }
+        .btn { background: var(--accent); color: white; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%; font-family: 'Fredoka'; transition: 0.3s; }
         .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
-        .btn-alt { background: var(--success); }
+        .btn-secondary { background: #95a5a6; margin-top: 10px; }
 
-        /* --- RESOURCE GRID --- */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            margin-top: 20px;
-        }
+        /* SEARCH BAR */
+        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-bar input { margin: 0; }
+        .search-bar .btn { width: 150px; }
 
-        .resource-card {
-            background: white;
-            padding: 20px;
-            border-radius: 20px;
-            border-top: 6px solid var(--accent);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
-
-        .tag {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: var(--accent);
-            text-transform: uppercase;
-        }
-
-        #userStatus {
-            text-align: right;
-            padding: 10px 5%;
-            font-size: 0.8rem;
-            background: #eee;
-        }
+        /* GRID */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .resource-card { background: white; padding: 20px; border-radius: 20px; border-top: 6px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .tag { font-size: 0.7rem; font-weight: 700; color: var(--accent); text-transform: uppercase; background: #ebf5fb; padding: 4px 8px; border-radius: 5px; margin-right: 5px; }
+        
+        #userStatus { text-align: right; padding: 10px 5%; font-size: 0.8rem; background: #eee; }
+        .step-hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div id="userStatus">Checking connection...</div>
+<div id="userStatus">Connecting to FET Hub...</div>
 
 <section class="banner">
     <h1>FET <span>HUB</span></h1>
-    <p>Professional Exchange for Taiwan's English Educators</p>
+    <p>Taiwan's English Teacher Resource Exchange</p>
 </section>
 
 <div class="container">
     
     <div id="authArea" class="card-box">
-        <h2 style="text-align: center; margin-top: 0;">Teacher Access</h2>
-        <p style="text-align: center; font-size: 0.9rem; color: #666;">Create an account to upload your JHS/SHS materials.</p>
-        <div class="auth-grid">
-            <div>
-                <input type="email" id="email" placeholder="Email Address">
-                <input type="password" id="password" placeholder="Password (min 6 chars)">
+        <div id="step1">
+            <h2 style="text-align: center; margin-top: 0;">Teacher Access</h2>
+            <input type="text" id="username" placeholder="Display Name (e.g. Teacher Wynn)">
+            <input type="password" id="password" placeholder="Password (min 6 chars)">
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn" onclick="showEmailStep()">Create Account</button>
+                <button class="btn" style="background:var(--success)" onclick="handleLogin()">Log In</button>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="btn" onclick="handleAuth('signup')">Sign Up (Verify Email)</button>
-                <button class="btn btn-alt" onclick="handleAuth('login')">Login</button>
-            </div>
+        </div>
+
+        <div id="step2" class="step-hidden">
+            <h2 style="text-align: center; margin-top: 0;">Verify Your Email</h2>
+            <p style="text-align: center; font-size: 0.9rem;">To keep the Hub safe, please enter your email for verification.</p>
+            <input type="email" id="email" placeholder="Verification Email Address">
+            <button class="btn" onclick="handleSignup()">Send Verification Link</button>
+            <button class="btn btn-secondary" onclick="resetAuth()">Back</button>
         </div>
     </div>
 
     <div id="uploadArea" class="card-box" style="display: none;">
-        <h2 style="margin-top: 0;">📤 Share a Resource</h2>
-        <div class="auth-grid">
-            <div>
-                <input type="text" id="fileTitle" placeholder="Activity Title (e.g. Past Tense Bingo)">
-                <select id="fileLevel">
-                    <option>Elementary School</option>
-                    <option>Junior High</option>
-                    <option>Senior High</option>
-                </select>
-            </div>
-            <div>
-                <input type="file" id="fileInput">
-                <button class="btn" id="uploadBtn" onclick="uploadResource()">Upload to Community</button>
-            </div>
+        <h2 style="margin-top: 0;">📤 Share Materials</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <input type="text" id="fileTitle" placeholder="Title (e.g. Weather Song)">
+            <select id="fileLevel">
+                <option>Elementary</option><option>Junior High</option><option>Senior High</option>
+            </select>
+            <input type="text" id="fileTopic" placeholder="Topic (Grammar, Games, etc.)">
+            <input type="text" id="fileTextbook" placeholder="Textbook Used">
         </div>
-        <p id="uploadStatus" style="font-size: 0.8rem; margin-top: 10px; color: var(--accent);"></p>
+        <input type="file" id="fileInput" style="margin-top:15px;">
+        <button class="btn" onclick="uploadResource()">Upload to Community</button>
     </div>
 
-    <h2 style="margin-top: 40px;">✨ Latest Resources</h2>
-    <div class="grid" id="mainGrid">
-        <p>Loading the latest activities...</p>
+    <div class="card-box">
+        <h2 style="margin-top: 0;">🔍 Search Materials</h2>
+        <div class="search-bar">
+            <input type="text" id="searchInput" onkeyup="filterResources()" placeholder="Search topics, textbooks, or titles...">
+        </div>
+        
+        <div class="grid" id="mainGrid">
+            <p>Gathering resources...</p>
+        </div>
     </div>
 
 </div>
 
 <script>
-    // --- DATABASE CONNECTION ---
     const SB_URL = 'https://jwvnqbwlrtyorsasbinu.supabase.co';
     const SB_KEY = 'sb_publishable_oBbh6V91NJwHAb30qsA0GA_TC33nFDB'; 
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
+    let allResources = [];
 
-    // --- 1. SESSION MONITOR ---
+    // --- SESSION HANDLING ---
     _supabase.auth.onAuthStateChange((event, session) => {
         const authArea = document.getElementById('authArea');
         const uploadArea = document.getElementById('uploadArea');
@@ -204,91 +111,104 @@
         if (session) {
             authArea.style.display = 'none';
             uploadArea.style.display = 'block';
-            status.innerHTML = `Signed in as: <b>${session.user.email}</b> | <a href="#" onclick="logout()">Logout</a>`;
+            status.innerHTML = `Logged in | <a href="#" onclick="_supabase.auth.signOut()">Logout</a>`;
         } else {
             authArea.style.display = 'block';
             uploadArea.style.display = 'none';
-            status.innerHTML = "Not signed in (Viewing Mode)";
+            status.innerHTML = "Viewing as Guest";
         }
         loadResources();
     });
 
-    // --- 2. AUTH LOGIC ---
-    async function handleAuth(type) {
+    // --- AUTH LOGIC ---
+    function showEmailStep() {
+        if (!document.getElementById('username').value || !document.getElementById('password').value) {
+            return alert("Please enter a username and password first!");
+        }
+        document.getElementById('step1').classList.add('step-hidden');
+        document.getElementById('step2').classList.remove('step-hidden');
+    }
+
+    function resetAuth() {
+        document.getElementById('step2').classList.add('step-hidden');
+        document.getElementById('step1').classList.remove('step-hidden');
+    }
+
+    async function handleSignup() {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        const username = document.getElementById('username').value;
 
-        if (!email || !password) return alert("Please fill in both fields.");
+        const { error } = await _supabase.auth.signUp({
+            email, password,
+            options: { data: { display_name: username } }
+        });
 
-        if (type === 'signup') {
-            const { error } = await _supabase.auth.signUp({ email, password });
-            if (error) alert(error.message);
-            else alert("Account created! Check your email to verify your account before logging in.");
-        } else {
-            const { error } = await _supabase.auth.signInWithPassword({ email, password });
-            if (error) alert("Login error: " + error.message);
-        }
+        if (error) alert(error.message);
+        else alert("Verification email sent! Check your inbox to activate your account.");
     }
 
-    async function logout() {
-        await _supabase.auth.signOut();
-        location.reload();
+    async function handleLogin() {
+        const email = prompt("Please enter your verified email to log in:");
+        const password = document.getElementById('password').value;
+        if (!email || !password) return;
+
+        const { error } = await _supabase.auth.signInWithPassword({ email, password });
+        if (error) alert("Login failed: " + error.message);
     }
 
-    // --- 3. RESOURCE LOADING ---
+    // --- RESOURCE LOGIC ---
     async function loadResources() {
-        const { data, error } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
-        const grid = document.getElementById('mainGrid');
-        
-        if (data && data.length > 0) {
-            grid.innerHTML = data.map(i => `
-                <div class="resource-card">
-                    <span class="tag">${i.level}</span>
-                    <h3 style="margin: 10px 0;">${i.title}</h3>
-                    <button class="btn" style="font-size: 0.8rem; padding: 8px;" onclick="window.open('${i.file_url}')">Download Resource</button>
-                </div>
-            `).join('');
-        } else {
-            grid.innerHTML = "<p>No resources found. Be the first to share one!</p>";
-        }
+        const { data } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
+        allResources = data || [];
+        renderGrid(allResources);
     }
 
-    // --- 4. UPLOAD LOGIC ---
+    function renderGrid(list) {
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = list.map(i => `
+            <div class="resource-card">
+                <div style="margin-bottom:10px;">
+                    <span class="tag">${i.level}</span>
+                    <span class="tag" style="background:#fdedec; color:#e74c3c;">${i.topic || 'General'}</span>
+                </div>
+                <h3 style="margin: 5px 0;">${i.title}</h3>
+                <p style="font-size:0.8rem; color:#666;">Textbook: ${i.textbook || 'Any'}</p>
+                <button class="btn" style="padding:8px; font-size:0.8rem;" onclick="window.open('${i.file_url}')">Download</button>
+            </div>
+        `).join('');
+    }
+
+    function filterResources() {
+        const term = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = allResources.filter(r => 
+            r.title.toLowerCase().includes(term) || 
+            (r.topic && r.topic.toLowerCase().includes(term)) || 
+            (r.textbook && r.textbook.toLowerCase().includes(term))
+        );
+        renderGrid(filtered);
+    }
+
     async function uploadResource() {
         const file = document.getElementById('fileInput').files[0];
         const title = document.getElementById('fileTitle').value;
         const level = document.getElementById('fileLevel').value;
-        const status = document.getElementById('uploadStatus');
+        const topic = document.getElementById('fileTopic').value;
+        const textbook = document.getElementById('fileTextbook').value;
 
-        if (!file || !title) return alert("Please provide a title and a file.");
+        if (!file || !title) return alert("Title and File required!");
 
-        status.innerText = "Processing upload...";
-        
-        try {
-            // A. Upload to Storage
-            const path = `resources/${Date.now()}_${file.name}`;
-            const { data: sData, error: sErr } = await _supabase.storage.from('resources').upload(path, file);
-            if (sErr) throw sErr;
+        const path = `resources/${Date.now()}_${file.name}`;
+        const { data: sData, error: sErr } = await _supabase.storage.from('resources').upload(path, file);
+        if (sErr) return alert(sErr.message);
 
-            // B. Get Public URL
-            const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
+        const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
+        const { error: dbErr } = await _supabase.from('activities').insert([{ 
+            title, level, topic, textbook, file_url: urlData.publicUrl 
+        }]);
 
-            // C. Insert into Database
-            const { error: dbErr } = await _supabase.from('activities').insert([
-                { title, level, file_url: urlData.publicUrl }
-            ]);
-            if (dbErr) throw dbErr;
-
-            alert("Resource shared successfully!");
-            location.reload();
-        } catch (err) {
-            alert("Upload failed: " + err.message);
-            status.innerText = "";
-        }
+        if (dbErr) alert(dbErr.message); else location.reload();
     }
-
-    loadResources();
 </script>
-
 </body>
 </html>
