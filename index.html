@@ -12,7 +12,7 @@
         
         /* BANNER */
         .banner { background: var(--primary); color: white; padding: 60px 5%; text-align: center; }
-        .banner h1 { font-size: 4rem; margin: 0; text-transform: uppercase; letter-spacing: -2px; }
+        .banner h1 { font-size: 4.5rem; margin: 0; text-transform: uppercase; letter-spacing: -2px; }
         .banner h1 span { color: var(--accent); }
         
         .container { max-width: 1000px; margin: -30px auto 40px; padding: 0 20px; }
@@ -22,25 +22,19 @@
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 12px; font-family: 'Fredoka'; box-sizing: border-box; }
         .btn { background: var(--accent); color: white; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%; font-family: 'Fredoka'; transition: 0.3s; }
         .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
-        .btn-secondary { background: #95a5a6; margin-top: 10px; }
-
-        /* SEARCH BAR */
-        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
-        .search-bar input { margin: 0; }
-        .search-bar .btn { width: 150px; }
-
+        
         /* GRID */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .resource-card { background: white; padding: 20px; border-radius: 20px; border-top: 6px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .tag { font-size: 0.7rem; font-weight: 700; color: var(--accent); text-transform: uppercase; background: #ebf5fb; padding: 4px 8px; border-radius: 5px; margin-right: 5px; }
         
         #userStatus { text-align: right; padding: 10px 5%; font-size: 0.8rem; background: #eee; }
-        .step-hidden { display: none; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div id="userStatus">Connecting to FET Hub...</div>
+<div id="userStatus">Connecting...</div>
 
 <section class="banner">
     <h1>FET <span>HUB</span></h1>
@@ -50,48 +44,36 @@
 <div class="container">
     
     <div id="authArea" class="card-box">
-        <div id="step1">
-            <h2 style="text-align: center; margin-top: 0;">Teacher Access</h2>
-            <input type="text" id="username" placeholder="Display Name (e.g. Teacher Wynn)">
-            <input type="password" id="password" placeholder="Password (min 6 chars)">
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button class="btn" onclick="showEmailStep()">Create Account</button>
-                <button class="btn" style="background:var(--success)" onclick="handleLogin()">Log In</button>
-            </div>
+        <h2 style="text-align: center; margin-top: 0;">Teacher Access</h2>
+        <p style="text-align: center; font-size: 0.9rem; color: #666;">Create a quick account to start sharing materials instantly.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <input type="text" id="username" placeholder="Choose Username (e.g. Teacher Grace)">
+            <input type="password" id="password" placeholder="Choose Password">
         </div>
-
-        <div id="step2" class="step-hidden">
-            <h2 style="text-align: center; margin-top: 0;">Verify Your Email</h2>
-            <p style="text-align: center; font-size: 0.9rem;">To keep the Hub safe, please enter your email for verification.</p>
-            <input type="email" id="email" placeholder="Verification Email Address">
-            <button class="btn" onclick="handleSignup()">Send Verification Link</button>
-            <button class="btn btn-secondary" onclick="resetAuth()">Back</button>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="btn" onclick="handleAuth('signup')">Create Account</button>
+            <button class="btn" style="background:var(--success)" onclick="handleAuth('login')">Log In</button>
         </div>
     </div>
 
-    <div id="uploadArea" class="card-box" style="display: none;">
-        <h2 style="margin-top: 0;">📤 Share Materials</h2>
+    <div id="uploadArea" class="card-box hidden">
+        <h2 style="margin-top: 0;">📤 Share a Resource</h2>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <input type="text" id="fileTitle" placeholder="Title (e.g. Weather Song)">
+            <input type="text" id="fileTitle" placeholder="Activity Title">
             <select id="fileLevel">
                 <option>Elementary</option><option>Junior High</option><option>Senior High</option>
             </select>
-            <input type="text" id="fileTopic" placeholder="Topic (Grammar, Games, etc.)">
-            <input type="text" id="fileTextbook" placeholder="Textbook Used">
+            <input type="text" id="fileTopic" placeholder="Topic (e.g. Phonics, Games)">
+            <input type="text" id="fileTextbook" placeholder="Textbook (e.g. Kang Hsuan)">
         </div>
-        <input type="file" id="fileInput" style="margin-top:15px;">
-        <button class="btn" onclick="uploadResource()">Upload to Community</button>
+        <input type="file" id="fileInput" style="margin-top:10px;">
+        <button class="btn" onclick="uploadResource()">Upload to Hub</button>
     </div>
 
     <div class="card-box">
         <h2 style="margin-top: 0;">🔍 Search Materials</h2>
-        <div class="search-bar">
-            <input type="text" id="searchInput" onkeyup="filterResources()" placeholder="Search topics, textbooks, or titles...">
-        </div>
-        
-        <div class="grid" id="mainGrid">
-            <p>Gathering resources...</p>
-        </div>
+        <input type="text" id="searchInput" onkeyup="search()" placeholder="Search topics, textbooks, or titles...">
+        <div class="grid" id="mainGrid" style="margin-top:20px;">Loading resources...</div>
     </div>
 
 </div>
@@ -100,114 +82,98 @@
     const SB_URL = 'https://jwvnqbwlrtyorsasbinu.supabase.co';
     const SB_KEY = 'sb_publishable_oBbh6V91NJwHAb30qsA0GA_TC33nFDB'; 
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
-    let allResources = [];
+    let allData = [];
 
-    // --- SESSION HANDLING ---
+    // --- AUTH MONITOR ---
     _supabase.auth.onAuthStateChange((event, session) => {
         const authArea = document.getElementById('authArea');
         const uploadArea = document.getElementById('uploadArea');
         const status = document.getElementById('userStatus');
 
         if (session) {
-            authArea.style.display = 'none';
-            uploadArea.style.display = 'block';
-            status.innerHTML = `Logged in | <a href="#" onclick="_supabase.auth.signOut()">Logout</a>`;
+            authArea.classList.add('hidden');
+            uploadArea.classList.remove('hidden');
+            const name = session.user.user_metadata.display_name || "Teacher";
+            status.innerHTML = `Welcome, <b>${name}</b> | <a href="#" onclick="_supabase.auth.signOut()">Logout</a>`;
         } else {
-            authArea.style.display = 'block';
-            uploadArea.style.display = 'none';
-            status.innerHTML = "Viewing as Guest";
+            authArea.classList.remove('hidden');
+            uploadArea.classList.add('hidden');
+            status.innerHTML = "Guest Mode";
         }
-        loadResources();
+        fetchData();
     });
 
-    // --- AUTH LOGIC ---
-    function showEmailStep() {
-        if (!document.getElementById('username').value || !document.getElementById('password').value) {
-            return alert("Please enter a username and password first!");
+    // --- INSTANT AUTH LOGIC ---
+    async function handleAuth(type) {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        
+        if(!user || !pass) return alert("Please fill in both fields!");
+
+        // We use a dummy email since Supabase requires an email format for standard Auth
+        const dummyEmail = `${user.replace(/\s+/g, '').toLowerCase()}@fethub.local`;
+
+        if (type === 'signup') {
+            const { error } = await _supabase.auth.signUp({
+                email: dummyEmail, 
+                password: pass,
+                options: { data: { display_name: user } }
+            });
+            if (error) alert(error.message);
+            else alert("Account created! You are now logged in.");
+        } else {
+            const { error } = await _supabase.auth.signInWithPassword({ email: dummyEmail, password: pass });
+            if (error) alert("Login failed. Check your username/password.");
         }
-        document.getElementById('step1').classList.add('step-hidden');
-        document.getElementById('step2').classList.remove('step-hidden');
     }
 
-    function resetAuth() {
-        document.getElementById('step2').classList.add('step-hidden');
-        document.getElementById('step1').classList.remove('step-hidden');
-    }
-
-    async function handleSignup() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const username = document.getElementById('username').value;
-
-        const { error } = await _supabase.auth.signUp({
-            email, password,
-            options: { data: { display_name: username } }
-        });
-
-        if (error) alert(error.message);
-        else alert("Verification email sent! Check your inbox to activate your account.");
-    }
-
-    async function handleLogin() {
-        const email = prompt("Please enter your verified email to log in:");
-        const password = document.getElementById('password').value;
-        if (!email || !password) return;
-
-        const { error } = await _supabase.auth.signInWithPassword({ email, password });
-        if (error) alert("Login failed: " + error.message);
-    }
-
-    // --- RESOURCE LOGIC ---
-    async function loadResources() {
+    // --- DATA LOGIC ---
+    async function fetchData() {
         const { data } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
-        allResources = data || [];
-        renderGrid(allResources);
+        allData = data || [];
+        render(allData);
     }
 
-    function renderGrid(list) {
-        const grid = document.getElementById('mainGrid');
-        grid.innerHTML = list.map(i => `
+    function render(list) {
+        document.getElementById('mainGrid').innerHTML = list.map(i => `
             <div class="resource-card">
-                <div style="margin-bottom:10px;">
-                    <span class="tag">${i.level}</span>
-                    <span class="tag" style="background:#fdedec; color:#e74c3c;">${i.topic || 'General'}</span>
-                </div>
-                <h3 style="margin: 5px 0;">${i.title}</h3>
+                <span class="tag">${i.level}</span><span class="tag" style="background:#fdedec; color:#e74c3c;">${i.topic || 'General'}</span>
+                <h3 style="margin:10px 0;">${i.title}</h3>
                 <p style="font-size:0.8rem; color:#666;">Textbook: ${i.textbook || 'Any'}</p>
                 <button class="btn" style="padding:8px; font-size:0.8rem;" onclick="window.open('${i.file_url}')">Download</button>
             </div>
         `).join('');
     }
 
-    function filterResources() {
+    function search() {
         const term = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = allResources.filter(r => 
+        render(allData.filter(r => 
             r.title.toLowerCase().includes(term) || 
             (r.topic && r.topic.toLowerCase().includes(term)) || 
             (r.textbook && r.textbook.toLowerCase().includes(term))
-        );
-        renderGrid(filtered);
+        ));
     }
 
     async function uploadResource() {
         const file = document.getElementById('fileInput').files[0];
         const title = document.getElementById('fileTitle').value;
-        const level = document.getElementById('fileLevel').value;
-        const topic = document.getElementById('fileTopic').value;
-        const textbook = document.getElementById('fileTextbook').value;
-
         if (!file || !title) return alert("Title and File required!");
 
         const path = `resources/${Date.now()}_${file.name}`;
         const { data: sData, error: sErr } = await _supabase.storage.from('resources').upload(path, file);
-        if (sErr) return alert(sErr.message);
+        if (sErr) return alert("Storage error: " + sErr.message);
 
         const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
         const { error: dbErr } = await _supabase.from('activities').insert([{ 
-            title, level, topic, textbook, file_url: urlData.publicUrl 
+            title, 
+            level: document.getElementById('fileLevel').value, 
+            topic: document.getElementById('fileTopic').value, 
+            textbook: document.getElementById('fileTextbook').value, 
+            file_url: urlData.publicUrl 
         }]);
 
-        if (dbErr) alert(dbErr.message); else location.reload();
+        if (dbErr) alert("Database error: " + dbErr.message);
+        else location.reload();
     }
 </script>
 </body>
