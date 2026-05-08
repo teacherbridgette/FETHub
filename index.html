@@ -10,45 +10,36 @@
         body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); }
         header { background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .hero { background: var(--primary); color: white; padding: 60px 5%; text-align: center; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+        .upload-box { background: white; padding: 25px; border-radius: 15px; border: 2px dashed var(--accent); margin-bottom: 30px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
         .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-top: 5px solid var(--accent); }
         .btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Fredoka'; font-weight: 600; }
-        
-        /* Upload Form Styling */
-        #uploadSection { display: none; background: white; padding: 30px; border-radius: 20px; margin-bottom: 30px; border: 2px dashed var(--accent); }
-        input, select { display: block; width: 100%; margin: 10px 0; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: 'Fredoka'; }
+        input, select { display: block; width: 100%; margin: 10px 0; padding: 8px; border-radius: 5px; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
 
 <header>
     <div style="font-size: 1.5rem; font-weight: 700;">FET<span>HUB</span></div>
-    <div id="authArea">
-        <button class="btn" onclick="promptAuth()">Login / Sign Up</button>
-    </div>
 </header>
 
 <div class="hero">
     <h1>FET HUB</h1>
-    <p>Professional Exchange for Taiwan's Educators</p>
+    <p>Professional Resource Exchange</p>
 </div>
 
 <div class="container">
-    <div id="uploadSection">
-        <h3>📤 Share a New Activity</h3>
-        <input type="text" id="fileTitle" placeholder="Activity Title (e.g., Past Tense Bingo)">
-        <select id="fileLevel">
-            <option>ES</option>
-            <option>JHS</option>
-            <option>SHS</option>
-        </select>
+    <div class="upload-box">
+        <h3>📤 Share a Resource</h3>
+        <input type="text" id="fileTitle" placeholder="Activity Title">
+        <select id="fileLevel"><option>ES</option><option>JHS</option><option>SHS</option></select>
         <input type="file" id="fileInput">
-        <button class="btn" onclick="uploadResource()">Upload to Community</button>
+        <button class="btn" onclick="uploadResource()">Upload Now</button>
     </div>
 
-    <h2>Community Resources</h2>
-    <div class="grid" id="mainGrid"></div>
+    <h2>Latest Resources</h2>
+    <div class="grid" id="mainGrid">Loading...</div>
 </div>
 
 <script>
@@ -56,24 +47,20 @@
     const SB_KEY = 'sb_publishable_oBbh6V91NJwHAb30qsA0GA_TC33nFDB'; 
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    // Check if user is logged in
-    _supabase.auth.onAuthStateChange((event, session) => {
-        if (session) {
-            document.getElementById('authArea').innerHTML = `<span>Welcome, Teacher!</span>`;
-            document.getElementById('uploadSection').style.display = 'block';
-        }
-    });
-
-    async function loadData() {
+    async function loadResources() {
         const { data } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
         const grid = document.getElementById('mainGrid');
-        grid.innerHTML = data.map(i => `
-            <div class="card">
-                <span style="font-size:0.7rem; color:var(--accent); font-weight:700;">${i.level}</span>
-                <h3 style="margin:10px 0;">${i.title}</h3>
-                <button class="btn" style="width:100%" onclick="window.open('${i.file_url}')">Download</button>
-            </div>
-        `).join('');
+        if (data && data.length > 0) {
+            grid.innerHTML = data.map(i => `
+                <div class="card">
+                    <span style="font-size:0.7rem; color:var(--accent); font-weight:700;">${i.level}</span>
+                    <h3 style="margin:10px 0;">${i.title}</h3>
+                    <button class="btn" onclick="window.open('${i.file_url}')">Download</button>
+                </div>
+            `).join('');
+        } else {
+            grid.innerHTML = "<p>No resources found yet. Be the first to upload!</p>";
+        }
     }
 
     async function uploadResource() {
@@ -81,40 +68,25 @@
         const title = document.getElementById('fileTitle').value;
         const level = document.getElementById('fileLevel').value;
 
-        if (!file || !title) return alert("Please add a title and select a file!");
+        if (!file || !title) return alert("Please fill in everything.");
 
-        // 1. Upload file to Storage
-        const fileName = `${Date.now()}_${file.name}`;
-        const { data: storageData, error: storageError } = await _supabase.storage
-            .from('resources')
-            .upload(fileName, file);
+        // Upload to storage
+        const path = `public/${Date.now()}_${file.name}`;
+        const { data: sData, error: sErr } = await _supabase.storage.from('resources').upload(path, file);
+        if (sErr) return alert("Upload Error: " + sErr.message);
 
-        if (storageError) return alert("Upload failed: " + storageError.message);
+        // Get Link
+        const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
 
-        // 2. Get the public URL
-        const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(fileName);
+        // Save to Database
+        const { error: dbErr } = await _supabase.from('activities').insert([{ title, level, file_url: urlData.publicUrl }]);
+        if (dbErr) return alert("Database Error: " + dbErr.message);
 
-        // 3. Save info to Database
-        await _supabase.from('activities').insert([
-            { title: title, level: level, file_url: urlData.publicUrl }
-        ]);
-
-        alert("Activity shared! Refreshing...");
-        location.reload();
+        alert("Success! Resource added.");
+        loadResources();
     }
 
-    function promptAuth() {
-        const email = prompt("Teacher Email:");
-        const pass = prompt("Password (min 6 chars):");
-        if (email && pass) {
-            _supabase.auth.signUp({ email, password: pass }).then(({ error }) => {
-                if (error) _supabase.auth.signInWithPassword({ email, password: pass }).then(() => location.reload());
-                else alert("Account created! Check your email to verify.");
-            });
-        }
-    }
-
-    loadData();
+    loadResources();
 </script>
 </body>
 </html>
