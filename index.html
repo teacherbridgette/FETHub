@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FET Hub Taiwan | Resource Database</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #1a2a3a; --accent: #3498db; --bg: #f4f7f6; --white: #ffffff; }
+        body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); color: var(--primary); }
+
+        header { background: var(--white); padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); sticky; top: 0; z-index: 100; }
+        .logo { font-size: 1.5rem; font-weight: 700; }
+        .logo span { color: var(--accent); }
+
+        /* Hero with Search */
+        .hero { background: var(--primary); color: white; padding: 80px 5%; text-align: center; }
+        .hero h1 { font-size: 3.5rem; margin: 0; }
+        
+        .search-container { margin-top: 30px; display: flex; justify-content: center; gap: 10px; }
+        #searchInput { width: 100%; max-width: 500px; padding: 15px 25px; border-radius: 30px; border: none; font-size: 1.1rem; font-family: 'Fredoka'; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        
+        /* Grid Layout */
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        .section-title { font-size: 1.8rem; margin: 40px 0 20px; display: flex; align-items: center; gap: 10px; border-left: 5px solid var(--accent); padding-left: 15px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
+        
+        .card { background: var(--white); border-radius: 20px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.3s; position: relative; border: 1px solid #eee; }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 12px 25px rgba(0,0,0,0.1); }
+        .card-preview { height: 160px; background: #ecf0f1; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; }
+        .card-content { padding: 20px; }
+        
+        .grammar-tag { background: #e1f5fe; color: #01579b; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-right: 5px; text-transform: uppercase; }
+        
+        .btn { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 12px; cursor: pointer; font-family: 'Fredoka'; font-weight: 600; text-decoration: none; display: inline-block; }
+        .btn-auth { background: none; border: 2px solid var(--accent); color: var(--accent); padding: 8px 20px; border-radius: 20px; }
+
+        /* Auth Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 40px; border-radius: 25px; width: 100%; max-width: 400px; text-align: center; }
+        input[type="email"], input[type="password"] { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">FET<span>HUB</span></div>
+    <div id="authControls">
+        <button class="btn-auth" onclick="toggleModal('authModal')">Create Teacher Account</button>
+    </div>
+</header>
+
+<div class="hero">
+    <h1>FET HUB</h1>
+    <p>Search JHS & SHS Resources by Grammar or Theme</p>
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search (e.g. 'Past Tense', 'Weather', 'Bingo')..." onkeyup="handleSearch()">
+    </div>
+</div>
+
+<div class="container">
+    <div class="section-title">✨ Latest Contributions</div>
+    <div class="grid" id="mainGrid">
+        <!-- REAL DATA FROM SUPABASE LOADS HERE -->
+    </div>
+</div>
+
+<!-- Simple Sign Up Modal -->
+<div id="authModal" class="modal">
+    <div class="modal-content">
+        <h2>Join FET Hub</h2>
+        <p>Connect with educators across Taiwan.</p>
+        <input type="email" id="regEmail" placeholder="School or Personal Email">
+        <input type="password" id="regPassword" placeholder="Create Password">
+        <button class="btn" style="width:100%; margin-top:10px;" onclick="handleSignUp()">Sign Up</button>
+        <button onclick="toggleModal('authModal')" style="background:none; border:none; margin-top:15px; color:gray; cursor:pointer;">Close</button>
+    </div>
+</div>
+
+<script>
+    // 1. DATABASE CONNECTION
+    const SB_URL = 'https://jwvnqbwlrtyorsasbinu.supabase.co';
+    const SB_KEY = 'jwvnqbwlrtyorsasbinu'; 
+    const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+    let allActivities = [];
+
+    // 2. FETCH REAL DATA
+    async function loadResources() {
+        const { data, error } = await _supabase
+            .from('activities')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (data) {
+            allActivities = data;
+            renderGrid(allActivities);
+        }
+    }
+
+    // 3. SEARCH LOGIC (Filters the list instantly)
+    function handleSearch() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = allActivities.filter(item => 
+            item.title.toLowerCase().includes(query) || 
+            (item.grammar && item.grammar.toLowerCase().includes(query)) ||
+            item.level.toLowerCase().includes(query)
+        );
+        renderGrid(filtered);
+    }
+
+    function renderGrid(items) {
+        const grid = document.getElementById('mainGrid');
+        if (items.length === 0) {
+            grid.innerHTML = "<p>No matches found. Try searching for 'ES' or 'JHS'.</p>";
+            return;
+        }
+        grid.innerHTML = items.map(item => `
+            <div class="card">
+                <div class="card-preview">${item.emoji || '📂'}</div>
+                <div class="card-content">
+                    <div>
+                        <span class="grammar-tag">${item.level}</span>
+                        ${item.grammar ? `<span class="grammar-tag" style="background:#e8f5e9; color:#2e7d32;">${item.grammar}</span>` : ''}
+                    </div>
+                    <h3 style="margin: 15px 0 10px;">${item.title}</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+                        <span style="color:#ff7e67; font-weight:700;">❤️ ${item.likes || 0}</span>
+                        <button class="btn" style="padding:8px 15px; font-size:0.8rem;">View Resource</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // 4. AUTH LOGIC
+    async function handleSignUp() {
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+        const { error } = await _supabase.auth.signUp({ email, password });
+        if (error) alert(error.message);
+        else alert("Check your email for the confirmation link!");
+    }
+
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    // Initialize
+    loadResources();
+</script>
+
+</body>
+</html>
