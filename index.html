@@ -2,64 +2,75 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>FET HUB | Taiwan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FET Hub Taiwan | Resource Exchange</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #1a2a3a; --accent: #3498db; --bg: #f4f7f6; }
-        body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); }
+        body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); color: var(--primary); }
         header { background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .hero { background: var(--primary); color: white; padding: 60px 5%; text-align: center; }
-        .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
-        .upload-box { background: white; padding: 25px; border-radius: 15px; border: 2px dashed var(--accent); margin-bottom: 30px; }
+        .hero { background: var(--primary); color: white; padding: 50px 5%; text-align: center; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        .upload-card { background: white; padding: 30px; border-radius: 20px; border: 2px dashed var(--accent); margin-bottom: 40px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-top: 5px solid var(--accent); }
-        .btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Fredoka'; font-weight: 600; }
-        input, select { display: block; width: 100%; margin: 10px 0; padding: 8px; border-radius: 5px; border: 1px solid #ddd; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-top: 5px solid var(--accent); transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); }
+        .btn { background: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-family: 'Fredoka'; font-weight: 600; width: 100%; }
+        input, select { display: block; width: 100%; margin: 10px 0; padding: 12px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; font-family: 'Fredoka'; }
+        #status { font-size: 0.8rem; color: #666; margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
 
 <header>
     <div style="font-size: 1.5rem; font-weight: 700;">FET<span>HUB</span></div>
+    <div style="font-size: 0.9rem; opacity: 0.7;">Taiwan Public School English Teachers</div>
 </header>
 
 <div class="hero">
     <h1>FET HUB</h1>
-    <p>Professional Resource Exchange</p>
+    <p>Share and download JHS & SHS classroom resources</p>
 </div>
 
 <div class="container">
-    <div class="upload-box">
-        <h3>📤 Share a Resource</h3>
-        <input type="text" id="fileTitle" placeholder="Activity Title">
-        <select id="fileLevel"><option>ES</option><option>JHS</option><option>SHS</option></select>
+    <div class="upload-card">
+        <h3 style="margin-top:0;">📤 Upload New Activity</h3>
+        <input type="text" id="fileTitle" placeholder="Activity Title (e.g. Past Tense Maze)">
+        <select id="fileLevel">
+            <option>Elementary School</option>
+            <option>Junior High</option>
+            <option>Senior High</option>
+        </select>
         <input type="file" id="fileInput">
-        <button class="btn" onclick="uploadResource()">Upload Now</button>
+        <button class="btn" id="uploadBtn" onclick="uploadResource()">Upload to Hub</button>
+        <div id="status">Ready to share.</div>
     </div>
 
-    <h2>Latest Resources</h2>
+    <h2>✨ Latest Resources</h2>
     <div class="grid" id="mainGrid">Loading...</div>
 </div>
 
 <script>
+    // PRE-CONFIGURED CONNECTION
     const SB_URL = 'https://jwvnqbwlrtyorsasbinu.supabase.co';
     const SB_KEY = 'sb_publishable_oBbh6V91NJwHAb30qsA0GA_TC33nFDB'; 
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
     async function loadResources() {
-        const { data } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
+        const { data, error } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
         const grid = document.getElementById('mainGrid');
+        
         if (data && data.length > 0) {
             grid.innerHTML = data.map(i => `
                 <div class="card">
-                    <span style="font-size:0.7rem; color:var(--accent); font-weight:700;">${i.level}</span>
+                    <span style="font-size:0.7rem; color:var(--accent); font-weight:700; text-transform:uppercase;">${i.level}</span>
                     <h3 style="margin:10px 0;">${i.title}</h3>
-                    <button class="btn" onclick="window.open('${i.file_url}')">Download</button>
+                    <button class="btn" onclick="window.open('${i.file_url}')">Download Resource</button>
                 </div>
             `).join('');
         } else {
-            grid.innerHTML = "<p>No resources found yet. Be the first to upload!</p>";
+            grid.innerHTML = "<p>No resources found yet. Be the first to share!</p>";
         }
     }
 
@@ -67,23 +78,37 @@
         const file = document.getElementById('fileInput').files[0];
         const title = document.getElementById('fileTitle').value;
         const level = document.getElementById('fileLevel').value;
+        const status = document.getElementById('status');
+        const btn = document.getElementById('uploadBtn');
 
-        if (!file || !title) return alert("Please fill in everything.");
+        if (!file || !title) return alert("Please add a title and select a file!");
 
-        // Upload to storage
-        const path = `public/${Date.now()}_${file.name}`;
-        const { data: sData, error: sErr } = await _supabase.storage.from('resources').upload(path, file);
-        if (sErr) return alert("Upload Error: " + sErr.message);
+        btn.disabled = true;
+        status.innerText = "Uploading to server...";
 
-        // Get Link
-        const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
+        try {
+            // 1. Upload to Storage
+            const path = `uploads/${Date.now()}_${file.name}`;
+            const { data: sData, error: sErr } = await _supabase.storage.from('resources').upload(path, file);
+            if (sErr) throw sErr;
 
-        // Save to Database
-        const { error: dbErr } = await _supabase.from('activities').insert([{ title, level, file_url: urlData.publicUrl }]);
-        if (dbErr) return alert("Database Error: " + dbErr.message);
+            // 2. Get Public URL
+            const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
 
-        alert("Success! Resource added.");
-        loadResources();
+            // 3. Insert into Table
+            const { error: dbErr } = await _supabase.from('activities').insert([
+                { title: title, level: level, file_url: urlData.publicUrl }
+            ]);
+            if (dbErr) throw dbErr;
+
+            status.innerText = "Success! Activity added.";
+            alert("Resource shared successfully!");
+            location.reload();
+        } catch (err) {
+            console.error(err);
+            status.innerText = "Error: " + err.message;
+            btn.disabled = false;
+        }
     }
 
     loadResources();
