@@ -7,92 +7,103 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #1a2a3a; --accent: #3498db; --bg: #f4f7f6; }
-        body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); color: var(--primary); }
+        body { font-family: 'Fredoka', sans-serif; margin: 0; background: var(--bg); }
         header { background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .hero { background: var(--primary); color: white; padding: 60px 5%; text-align: center; }
-        .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+        .hero h1 { font-size: 3.5rem; margin: 0; }
+        .search-box { margin-top: 25px; }
+        #search { width: 100%; max-width: 400px; padding: 12px 20px; border-radius: 25px; border: none; font-family: 'Fredoka'; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid var(--accent); }
-        .status-msg { padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; display: none; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-top: 5px solid var(--accent); }
+        .btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Fredoka'; font-weight: 600; }
+        #status { position: fixed; bottom: 20px; left: 20px; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; color: white; display: none; z-index: 1000; }
     </style>
 </head>
 <body>
 
 <header>
     <div style="font-size: 1.5rem; font-weight: 700;">FET<span>HUB</span></div>
-    <button onclick="checkConnection()" style="cursor:pointer; background:none; border:1px solid #ccc; border-radius:5px; padding:5px 10px;">Test Connection</button>
+    <button class="btn" onclick="promptLogin()">Sign Up / Login</button>
 </header>
 
 <div class="hero">
     <h1>FET HUB</h1>
-    <p>Connecting ES, JHS, and SHS Educators in Taiwan</p>
-</div>
-
-<div class="container">
-    <div id="connectionStatus" class="status-msg"></div>
-    
-    <h2>✨ Newly Uploaded</h2>
-    <div class="grid" id="mainGrid">
-        <p>Loading activities...</p>
+    <p>Professional Exchange for Taiwan's English Educators</p>
+    <div class="search-box">
+        <input type="text" id="search" placeholder="Search grammar or level..." onkeyup="filterContent()">
     </div>
 </div>
 
+<div class="container">
+    <div class="grid" id="mainGrid">
+        <p>Connecting to FET Hub Database...</p>
+    </div>
+</div>
+
+<div id="status"></div>
+
 <script>
-    // 1. YOUR SETTINGS (Double-check these!)
     const SB_URL = 'https://jwvnqbwlrtyorsasbinu.supabase.co';
-    const SB_KEY = 'YOUR_ACTUAL_ANON_KEY_HERE'; // <--- PASTE YOUR KEY HERE
+    const SB_KEY = 'sb_publishable_oBbh6V91NJwHAb30qsA0GA_TC33nFDB'; 
 
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
+    let items = [];
 
-    // 2. CONNECTION TESTER
-    async function checkConnection() {
-        const statusDiv = document.getElementById('connectionStatus');
-        statusDiv.style.display = 'block';
-        statusDiv.style.backgroundColor = '#fff3cd';
-        statusDiv.innerText = "Checking connection...";
-
-        try {
-            const { data, error } = await _supabase.from('activities').select('count').limit(1);
-            
-            if (error) {
-                statusDiv.style.backgroundColor = '#f8d7da';
-                statusDiv.innerText = "Error: " + error.message + " (Check if table 'activities' exists)";
-            } else {
-                statusDiv.style.backgroundColor = '#d4edda';
-                statusDiv.innerText = "Connected successfully to FET Hub Database!";
-                loadData();
-            }
-        } catch (err) {
-            statusDiv.style.backgroundColor = '#f8d7da';
-            statusDiv.innerText = "Connection failed. Check your API Key.";
-        }
-    }
-
-    // 3. LOAD DATA
-    async function loadData() {
-        const { data, error } = await _supabase
-            .from('activities')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        const grid = document.getElementById('mainGrid');
-        
-        if (data && data.length > 0) {
-            grid.innerHTML = data.map(item => `
-                <div class="card">
-                    <span style="font-size:0.7rem; color:var(--accent); font-weight:700;">${item.level || 'ES'}</span>
-                    <h3 style="margin:10px 0;">${item.title}</h3>
-                    <p style="font-size:0.8rem; opacity:0.7;">Likes: ${item.likes || 0}</p>
-                </div>
-            `).join('');
+    async function start() {
+        const { data, error } = await _supabase.from('activities').select('*');
+        if (error) {
+            showStatus("Error: " + error.message, "#e74c3c");
+            document.getElementById('mainGrid').innerHTML = "<p>Connection error. Check your Supabase Table name.</p>";
         } else {
-            grid.innerHTML = "<p>Connected, but the 'activities' table is empty. Add a row in Supabase!</p>";
+            items = data;
+            render(items);
+            showStatus("Connected to Database!", "#27ae60");
         }
     }
 
-    // Run test on load
-    checkConnection();
-</script>
+    function render(data) {
+        const grid = document.getElementById('mainGrid');
+        if (!data || data.length === 0) {
+            grid.innerHTML = "<p>Database connected! Add a row to your 'activities' table in Supabase to see it here.</p>";
+            return;
+        }
+        grid.innerHTML = data.map(i => `
+            <div class="card">
+                <span style="color:var(--accent); font-size:0.7rem; font-weight:700;">${i.level || 'ES/JHS'}</span>
+                <h3 style="margin:10px 0;">${i.title}</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+                    <span>❤️ ${i.likes || 0}</span>
+                    <button class="btn" style="font-size:0.7rem;">View</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
+    function filterContent() {
+        const q = document.getElementById('search').value.toLowerCase();
+        render(items.filter(i => i.title.toLowerCase().includes(q)));
+    }
+
+    function showStatus(msg, color) {
+        const s = document.getElementById('status');
+        s.style.display = 'block';
+        s.style.background = color;
+        s.innerText = msg;
+    }
+
+    function promptLogin() {
+        const email = prompt("Teacher Email:");
+        const pass = prompt("Create Password:");
+        if (email && pass) {
+            _supabase.auth.signUp({ email, password: pass }).then(({ error }) => {
+                if (error) alert(error.message);
+                else alert("Account created! Check your email to verify.");
+            });
+        }
+    }
+
+    start();
+</script>
 </body>
 </html>
