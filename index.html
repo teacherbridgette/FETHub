@@ -20,6 +20,7 @@
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 12px; font-family: 'Fredoka'; box-sizing: border-box; }
         .btn { background: var(--accent); color: white; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%; font-family: 'Fredoka'; transition: 0.3s; }
         .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
         
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .resource-card { background: white; padding: 20px; border-radius: 20px; border-top: 6px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -56,12 +57,16 @@
         <h2 style="margin-top: 0;">📤 Upload Material</h2>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <input type="text" id="fileTitle" placeholder="Activity Title">
-            <select id="fileLevel"><option>ES</option><option>JHS</option><option>SHS</option></select>
+            <select id="fileLevel">
+                <option value="ES">Elementary (ES)</option>
+                <option value="JHS">Junior High (JHS)</option>
+                <option value="SHS">Senior High (SHS)</option>
+            </select>
             <input type="text" id="fileTopic" placeholder="Topic (e.g. Grammar)">
             <input type="text" id="fileTextbook" placeholder="Textbook (e.g. Nani)">
         </div>
         <input type="file" id="fileInput" style="margin-top:10px;">
-        <button class="btn" onclick="uploadResource()">Add to Community</button>
+        <button class="btn" id="uploadBtn" onclick="uploadResource()">Add to Community</button>
     </div>
 
     <div class="card-box">
@@ -72,11 +77,13 @@
 </div>
 
 <script>
+    // Configuration
     const SB_URL = 'https://jwvnqbwlrtyorsasbinu.supabase.co';
     const SB_KEY = 'sb_publishable_oBbh6V91NJwHAb30qsA0GA_TC33nFDB'; 
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
     let allData = [];
 
+    // Auth Observer
     _supabase.auth.onAuthStateChange((event, session) => {
         const authArea = document.getElementById('authArea');
         const uploadArea = document.getElementById('uploadArea');
@@ -85,7 +92,7 @@
         if (session) {
             authArea.classList.add('hidden');
             uploadArea.classList.remove('hidden');
-            status.innerHTML = `Signed in as <b>${session.user.user_metadata.display_name}</b> | <a href="#" onclick="_supabase.auth.signOut()">Logout</a>`;
+            status.innerHTML = `Signed in as <b>${session.user.user_metadata.display_name || 'Teacher'}</b> | <a href="#" onclick="logout()">Logout</a>`;
         } else {
             authArea.classList.remove('hidden');
             uploadArea.classList.add('hidden');
@@ -94,64 +101,132 @@
         fetchData();
     });
 
+    async function logout() {
+        await _supabase.auth.signOut();
+        location.reload();
+    }
+
     async function handleAuth(type) {
         const user = document.getElementById('username').value;
         const pass = document.getElementById('password').value;
         if(!user || !pass) return alert("Fields required!");
+        
+        // Supabase requires an email format, so we create a virtual one from the username
         const dummyEmail = `${user.toLowerCase().replace(/\s/g, '')}@fethub.local`;
 
         if (type === 'signup') {
-            const { error } = await _supabase.auth.signUp({ email: dummyEmail, password: pass, options: { data: { display_name: user } } });
-            if (error) alert(error.message);
+            const { error } = await _supabase.auth.signUp({ 
+                email: dummyEmail, 
+                password: pass, 
+                options: { data: { display_name: user } } 
+            });
+            if (error) alert("Signup Error: " + error.message);
+            else alert("Account created! You can now log in.");
         } else {
-            const { error } = await _supabase.auth.signInWithPassword({ email: dummyEmail, password: pass });
-            if (error) alert("Login failed. Check credentials.");
+            const { error } = await _supabase.auth.signInWithPassword({ 
+                email: dummyEmail, 
+                password: pass 
+            });
+            if (error) alert("Login failed. Check your credentials.");
         }
     }
 
     async function fetchData() {
-        const { data } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
+        const { data, error } = await _supabase
+            .from('activities')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error("Fetch Error:", error);
+            document.getElementById('mainGrid').innerHTML = "Error loading data.";
+            return;
+        }
+        
         allData = data || [];
         render(allData);
     }
 
     function render(list) {
+        if (list.length === 0) {
+            document.getElementById('mainGrid').innerHTML = "No resources found.";
+            return;
+        }
+
         document.getElementById('mainGrid').innerHTML = list.map(i => `
             <div class="resource-card">
-                <span class="tag">${i.level}</span><span class="tag" style="background:#fdedec; color:#e74c3c;">${i.topic || 'General'}</span>
+                <span class="tag">${i.level}</span>
+                <span class="tag" style="background:#fdedec; color:#e74c3c;">${i.topic || 'General'}</span>
                 <h3 style="margin:10px 0;">${i.title}</h3>
                 <p style="font-size:0.8rem; color:#666;">Textbook: ${i.textbook || 'Any'}</p>
-                <button class="btn" style="padding:8px; font-size:0.8rem;" onclick="window.open('${i.file_url}')">Download</button>
+                <button class="btn" style="padding:8px; font-size:0.8rem;" onclick="window.open('${i.file_url}', '_blank')">Download</button>
             </div>
         `).join('');
     }
 
     function search() {
         const term = document.getElementById('searchInput').value.toLowerCase();
-        render(allData.filter(r => r.title.toLowerCase().includes(term) || (r.topic && r.topic.toLowerCase().includes(term)) || (r.textbook && r.textbook.toLowerCase().includes(term))));
+        const filtered = allData.filter(r => 
+            r.title.toLowerCase().includes(term) || 
+            (r.topic && r.topic.toLowerCase().includes(term)) || 
+            (r.textbook && r.textbook.toLowerCase().includes(term))
+        );
+        render(filtered);
     }
 
     async function uploadResource() {
-        const file = document.getElementById('fileInput').files[0];
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
         const title = document.getElementById('fileTitle').value;
-        if (!file || !title) return alert("Title and File required!");
+        const uploadBtn = document.getElementById('uploadBtn');
 
-        const path = `resources/${Date.now()}_${file.name}`;
-        const { data: sData, error: sErr } = await _supabase.storage.from('resources').upload(path, file);
-        if (sErr) return alert("Storage Error: " + sErr.message);
+        if (!file || !title) return alert("Please provide both a Title and a File.");
 
-        const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
-        const { error: dbErr } = await _supabase.from('activities').insert([{ 
-            title, 
-            level: document.getElementById('fileLevel').value, 
-            topic: document.getElementById('fileTopic').value, 
-            textbook: document.getElementById('fileTextbook').value, 
-            file_url: urlData.publicUrl 
-        }]);
+        // UI Feedback
+        uploadBtn.innerText = "Uploading... Please wait";
+        uploadBtn.disabled = true;
 
-        if (dbErr) alert("Database Error: " + dbErr.message);
-        else location.reload();
+        try {
+            // 1. Upload File to Storage Bucket 'resources'
+            const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+            const { data: storageData, error: storageError } = await _supabase.storage
+                .from('resources')
+                .upload(fileName, file);
+
+            if (storageError) throw storageError;
+
+            // 2. Generate Public URL
+            const { data: publicUrlData } = _supabase.storage
+                .from('resources')
+                .getPublicUrl(fileName);
+
+            const fileUrl = publicUrlData.publicUrl;
+
+            // 3. Save Metadata to 'activities' Table
+            const { error: dbError } = await _supabase
+                .from('activities')
+                .insert([{ 
+                    title: title, 
+                    level: document.getElementById('fileLevel').value, 
+                    topic: document.getElementById('fileTopic').value, 
+                    textbook: document.getElementById('fileTextbook').value, 
+                    file_url: fileUrl 
+                }]);
+
+            if (dbError) throw dbError;
+
+            alert("Resource successfully shared!");
+            location.reload(); // Refresh to show the new item
+
+        } catch (err) {
+            console.error("Upload process failed:", err);
+            alert("Error: " + err.message);
+        } finally {
+            uploadBtn.innerText = "Add to Community";
+            uploadBtn.disabled = false;
+        }
     }
 </script>
+
 </body>
 </html>
