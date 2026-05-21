@@ -82,6 +82,7 @@
     
     let isSignUpMode = false;
     let allData = [];
+    let currentSession = null;
 
     // Toggle between Login and Signup UI
     function toggleAuthMode() {
@@ -96,11 +97,12 @@
         const authArea = document.getElementById('authArea');
         const uploadArea = document.getElementById('uploadArea');
         const status = document.getElementById('userStatus');
+        
+        currentSession = session;
 
         if (session) {
             authArea.classList.add('hidden');
             uploadArea.classList.remove('hidden');
-            // Dynamically shows the logged-in user's email address
             status.innerHTML = `Signed in as <b>${session.user.email}</b> | <a href="#" onclick="logout()">Logout</a>`;
         } else {
             authArea.classList.remove('hidden');
@@ -120,7 +122,7 @@
             const { data, error } = await _supabase.auth.signUp({
                 email: email,
                 password: password,
-                options: { emailRedirectTo: window.location.origin }
+                options: { emailRedirectTo: window.location.href } // Fixed configuration for deep repo pathways
             });
             if (error) alert(error.message);
             else alert("Signup successful! Please check your email for the verification link.");
@@ -133,7 +135,7 @@
     async function loginWithGoogle() {
         await _supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: window.location.origin }
+            options: { redirectTo: window.location.href } // Ensures path consistency on GitHub Pages sub-directories
         });
     }
 
@@ -143,12 +145,22 @@
     }
 
     async function fetchData() {
-        const { data } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
-        allData = data || [];
-        render(allData);
+        try {
+            const { data, error } = await _supabase.from('activities').select('*').order('created_at', { ascending: false });
+            if (error) throw error;
+            allData = data || [];
+            render(allData);
+        } catch (err) {
+            console.error("Error loading resources:", err.message);
+            document.getElementById('mainGrid').innerHTML = `<p style="color:red;">Failed to load resources. Ensure your table RLS policies are configured.</p>`;
+        }
     }
 
     function render(list) {
+        if (list.length === 0) {
+            document.getElementById('mainGrid').innerHTML = '<p style="color:#666; text-align:center;">No resources found.</p>';
+            return;
+        }
         document.getElementById('mainGrid').innerHTML = list.map(i => `
             <div class="resource-card">
                 <span class="tag">${i.level}</span>
@@ -165,6 +177,11 @@
     }
 
     async function uploadResource() {
+        // Double-check auth client-side as a structural buffer before hitting Row Level Security barriers
+        if (!currentSession) {
+            return alert("Security Action Blocked: You must be logged in as a verified educator to add files.");
+        }
+
         const file = document.getElementById('fileInput').files[0];
         const title = document.getElementById('fileTitle').value;
         if (!file || !title) return alert("Title and File required!");
@@ -176,7 +193,7 @@
         try {
             const path = `resources/${Date.now()}_${file.name.replace(/\s/g, '_')}`;
             const { error: sErr } = await _supabase.storage.from('resources').upload(path, file);
-            if (sErr) throw sErr;
+            if (sErr) throw new Error(`Storage error: ${sErr.message}. Make sure bucket policies allow your role.`);
 
             const { data: urlData } = _supabase.storage.from('resources').getPublicUrl(path);
             const { error: dbErr } = await _supabase.from('activities').insert([{ 
@@ -187,7 +204,8 @@
                 file_url: urlData.publicUrl 
             }]);
 
-            if (dbErr) throw dbErr;
+            if (dbErr) throw new Error(`Database insert error: ${dbErr.message}. Check if Table RLS is missing an authenticated insert policy.`);
+            
             alert("Uploaded successfully!");
             location.reload();
         } catch (err) {
